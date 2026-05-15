@@ -1,73 +1,113 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
-    <title>Disparador PetLojas - Seguro</title>
+    <title>Disparador PetLojas - Seguro & Dinâmico</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f7f6; }
         .painel { display: flex; gap: 20px; }
         .caixa-mensagens, .caixa-leads { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 50%; }
-        textarea { width: 100%; height: 60px; margin-bottom: 10px; }
-        .lead-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-        .btn-disparo { background: #25D366; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        textarea { width: 100%; height: 60px; margin-bottom: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Novos estilos para os controlos de colunas */
+        .controles-colunas { background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #dce3e8; }
+        .linha-controle { display: flex; justify-content: space-between; align-items: center; }
+        select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 60%; font-weight: bold; }
+        
+        .lead-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: #fafafa; margin-bottom: 5px; border-radius: 4px; }
+        .btn-disparo { background: #25D366; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-disparo:hover { background: #1ebd5a; }
         .btn-disparo:disabled { background: #ccc; cursor: not-allowed; }
         .status-check { color: #25D366; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-    <h2>🚀 Disparador PetLojas - Modo de Segurança Ativado</h2>
+    <h2>🚀 Disparador PetLojas - Motor Kanban Dinâmico</h2>
 
     <div class="painel">
         <div class="caixa-mensagens">
             <h3>Variáveis de Mensagem (Roleta)</h3>
-            <textarea id="msg1" placeholder="Mensagem 1...">Olá! Vimos seu interesse...</textarea>
-            <textarea id="msg2" placeholder="Mensagem 2...">Opa, tudo bem? Recebemos seu contato...</textarea>
-            <textarea id="msg3" placeholder="Mensagem 3...">Oi! Que bom ter você aqui. Para começarmos...</textarea>
-            <textarea id="msg4" placeholder="Mensagem 4...">Fala comigo! Vi que você se cadastrou...</textarea>
-            <textarea id="msg5" placeholder="Mensagem 5...">Saudações! Nossa equipe notou seu lead...</textarea>
+            <textarea id="msg1" placeholder="Mensagem 1...">Olá! Vimos o seu interesse...</textarea>
+            <textarea id="msg2" placeholder="Mensagem 2...">Opa, tudo bem? Recebemos o seu contacto...</textarea>
+            <textarea id="msg3" placeholder="Mensagem 3...">Olá! Que bom ter você aqui. Para começarmos...</textarea>
+            <textarea id="msg4" placeholder="Mensagem 4...">Fale comigo! Vi que se registou...</textarea>
+            <textarea id="msg5" placeholder="Mensagem 5...">Saudações! A nossa equipa notou o seu lead...</textarea>
         </div>
 
         <div class="caixa-leads">
-            <h3>Lista de Disparo: <span id="coluna-atual">Novos Leads</span></h3>
+            
+            <div class="controles-colunas">
+                <div class="linha-controle">
+                    <label>📥 <strong>Puxar Leads de:</strong></label>
+                    <select id="coluna-origem" onchange="carregarLeads()">
+                        <option value="novos_leads">Novos Leads</option>
+                        <option value="em_contato">Em Contacto</option>
+                        <option value="retornar">Retornar (Follow-up)</option>
+                    </select>
+                </div>
+                <div class="linha-controle">
+                    <label>📤 <strong>Mover Card para:</strong></label>
+                    <select id="coluna-destino">
+                        <option value="em_contato">Em Contacto</option>
+                        <option value="em_negociacao">Em Negociação</option>
+                        <option value="fechado">Fechado / Ganho</option>
+                    </select>
+                </div>
+            </div>
+
+            <h3>Lista de Disparo Atual</h3>
             <div id="lista-leads">
                 </div>
         </div>
     </div>
 
     <script>
-        // 1. Simulação dos Leads vindos do Firebase
+        // 1. Simulação do Banco de Dados (Adicionei leads em colunas diferentes para testar o filtro)
         let leads = [
             { id: "lead_001", nome: "João Silva", telefone: "5511999999991", status: "novos_leads" },
             { id: "lead_002", nome: "Maria Souza", telefone: "5511999999992", status: "novos_leads" },
-            { id: "lead_003", nome: "Carlos Pet", telefone: "5511999999993", status: "novos_leads" }
+            { id: "lead_003", nome: "Carlos Pet", telefone: "5511999999993", status: "novos_leads" },
+            { id: "lead_004", nome: "Ana Veterinária", telefone: "5511999999994", status: "retornar" },
+            { id: "lead_005", nome: "PetShop do Bairro", telefone: "5511999999995", status: "em_contato" }
         ];
 
-        let ultimaMensagemIndex = -1; // Memória para não repetir a mensagem
+        let ultimaMensagemIndex = -1;
 
-        // 2. Renderizar a lista na tela
+        // 2. Renderizar a lista na tela de acordo com o Menu "Origem"
         function carregarLeads() {
+            const origemSelecionada = document.getElementById("coluna-origem").value;
             const container = document.getElementById("lista-leads");
             container.innerHTML = "";
             
+            let encontrouAlguem = false;
+
             leads.forEach((lead, index) => {
-                if(lead.status === "novos_leads") {
+                if(lead.status === origemSelecionada) {
+                    encontrouAlguem = true;
                     container.innerHTML += `
                         <div class="lead-item" id="item-${lead.id}">
-                            <span>${lead.nome} (${lead.telefone})</span>
+                            <span><strong>${lead.nome}</strong> <br><small>${lead.telefone}</small></span>
                             <div>
-                                <span class="status-check" id="check-${lead.id}">✅ Em Contato</span>
-                                <button class="btn-disparo" id="btn-${lead.id}" onclick="dispararSeguro('${lead.id}', '${lead.telefone}', ${index})">Disparar WhatsApp</button>
+                                <span class="status-check" id="check-${lead.id}">✅ Movido!</span>
+                                <button class="btn-disparo" id="btn-${lead.id}" onclick="dispararSeguro('${lead.id}', '${lead.telefone}', ${index})">Disparar</button>
                             </div>
                         </div>
                     `;
                 }
             });
+
+            if(!encontrouAlguem) {
+                container.innerHTML = `<p style="color: #888; text-align: center;">Nenhum lead encontrado nesta coluna.</p>`;
+            }
         }
 
         // 3. O Motor do Disparo Seguro
         function dispararSeguro(leadId, telefone, indexLead) {
-            // A. Coletar as mensagens atuais das caixas
+            // Descobre qual é a coluna de destino escolhida no menu
+            const destinoSelecionado = document.getElementById("coluna-destino").value;
+            const nomeDestinoFormatado = document.getElementById("coluna-destino").options[document.getElementById("coluna-destino").selectedIndex].text;
+
             const mensagens = [
                 document.getElementById("msg1").value,
                 document.getElementById("msg2").value,
@@ -76,47 +116,57 @@
                 document.getElementById("msg5").value
             ];
 
-            // B. Sorteio Anti-Repetição
+            // Sorteio Anti-Repetição
             let mensagemSorteadaIndex;
             do {
                 mensagemSorteadaIndex = Math.floor(Math.random() * mensagens.length);
             } while (mensagemSorteadaIndex === ultimaMensagemIndex);
             
-            ultimaMensagemIndex = mensagemSorteadaIndex; // Salva a mensagem usada agora
+            ultimaMensagemIndex = mensagemSorteadaIndex; 
             let textoCodificado = encodeURIComponent(mensagens[mensagemSorteadaIndex]);
 
-            // C. Abrir o WhatsApp
+            // Abrir o WhatsApp
             window.open(`https://wa.me/${telefone}?text=${textoCodificado}`, '_blank');
 
-            // D. Atualizar Interface e Mover no Kanban (Simulação Firebase)
+            // Atualizar Interface
             document.getElementById(`btn-${leadId}`).style.display = "none";
-            document.getElementById(`check-${leadId}`).style.display = "inline";
-            console.log(`🔥 FIREBASE: Movendo lead ${leadId} de 'novos_leads' para 'em_contato'`);
-            // Aqui você colocará o seu código: firebase.firestore().collection('leads').doc(leadId).update({ status: 'em_contato' });
+            const checkIcon = document.getElementById(`check-${leadId}`);
+            checkIcon.style.display = "inline";
+            checkIcon.innerText = `✅ Em: ${nomeDestinoFormatado}`;
 
-            // E. O Cooldown (Trava de Segurança Aleatória entre 5 e 15 segundos)
-            // Desabilita TODOS os botões da lista para forçar o freio
+            // SIMULAÇÃO DO FIREBASE (Aqui injetamos a variável dinâmica de destino)
+            console.log(`🔥 FIREBASE: db.collection('leads').doc('${leadId}').update({ status: '${destinoSelecionado}' });`);
+
+            // O Cooldown (Trava de Segurança Aleatória entre 5 e 15 segundos)
             const todosBotoes = document.querySelectorAll(".btn-disparo");
             todosBotoes.forEach(btn => btn.disabled = true);
 
-            // Sorteia o tempo entre 5.000ms e 15.000ms
             const tempoEspera = Math.floor(Math.random() * (15000 - 5000 + 1)) + 5000;
-            console.log(`⏱️ Aguardando ${(tempoEspera/1000).toFixed(1)} segundos para liberar o próximo disparo...`);
+            console.log(`⏱️ Aguardando ${(tempoEspera/1000).toFixed(1)} segundos para libertar o botão...`);
 
-            // F. Libera os botões quando o tempo acabar
+            // Contagem decrescente visual (Bónus de UI)
+            let tempoRestante = Math.floor(tempoEspera / 1000);
+            todosBotoes.forEach(btn => btn.innerText = `Aguarde ${tempoRestante}s...`);
+            
+            let intervalo = setInterval(() => {
+                tempoRestante--;
+                if(tempoRestante > 0) {
+                    todosBotoes.forEach(btn => btn.innerText = `Aguarde ${tempoRestante}s...`);
+                }
+            }, 1000);
+
+            // Liberta os botões quando o tempo acabar
             setTimeout(() => {
+                clearInterval(intervalo);
                 todosBotoes.forEach(btn => {
                     btn.disabled = false;
-                    btn.innerText = "Disparar WhatsApp"; // Restaura o texto original
+                    btn.innerText = "Disparar"; 
                 });
-                console.log("🟢 Botões liberados para o próximo lead!");
+                console.log("🟢 Botões libertados para o próximo lead!");
             }, tempoEspera);
-
-            // Feedback visual no botão bloqueado
-            todosBotoes.forEach(btn => btn.innerText = `Aguarde...`);
         }
 
-        // Inicia a aplicação
+        // Inicia a aplicação carregando a coluna padrão
         carregarLeads();
     </script>
 </body>
